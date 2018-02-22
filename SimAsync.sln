@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimRing", "SimRing.csproj", "{4F675F5C-53D0-4458-ABDD-2C5061E3BC7A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimAsync", "SimAsync.csproj", "{4F675F5C-53D0-4458-ABDD-2C5061E3BC7A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
