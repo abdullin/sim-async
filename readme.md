@@ -8,8 +8,6 @@ simulation will inject random faults and fast-forward time.
 
 ## Reference List
 
-
-
 1. [SimCPU](https://github.com/abdullin/simcpu)
 2. [SimRing](https://gist.github.com/abdullin/af7c9b7fd4aa58cadcc346c8e194d9ab)
 3. [SimAsync](https://github.com/abdullin/simasync) - *this*.
@@ -21,9 +19,13 @@ that are otherwise hard to catch or reproduce.
 
 In order to fulfill this promise a simulation needs to exhibit a few
 specific properties. In the previous projects (see _Reference List_)
-we've already explored _Determinism_ and _Time acceleration_. This
-project introduces two more capabilities: _Fault injections_ and
-_Simulation of the parallel processes_.
+we've already explored _Determinism_ and _Time acceleration_. 
+
+This sample project introduces two more capabilities: _Fault
+injections_ and _Simulation of the parallel processes_.
+
+For the purpose of this exercise we focus only on a single-node
+deployment without any complex storage or configuration.
 
 ## Determinism
 
@@ -61,6 +63,7 @@ For example, _Actor 1_ could experience a storage freeze for 10 ms
 while reading from the database. Scheduler will switch to the other
 pending tasks (e.g. message handling by _Actor 2_) before coming back
 to _Actor 1_ to continue execution.
+
 
 # Assignments
 
