@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Threading.Tasks;
 
-namespace SimRing {
+namespace SimAsync {
     public sealed class SimScheduler : TaskScheduler {
         readonly Sim _sim;
 
@@ -22,7 +21,6 @@ namespace SimRing {
         }
 
         protected override void QueueTask(Task task) {
-
             switch (task) {
                 case FutureTask ft:
                     _sim.Schedule(ft.Ts, ft);
@@ -31,7 +29,6 @@ namespace SimRing {
                     _sim.Schedule(TimeSpan.Zero, task);
                     break;
             }
-            
         }
 
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) {
@@ -42,15 +39,15 @@ namespace SimRing {
     sealed class FutureTask : Task {
         public readonly TimeSpan Ts;
 
-        public FutureTask(TimeSpan ts) : base(() => {}) {
+        public FutureTask(TimeSpan ts) : base(() => { }) {
             Ts = ts;
         }
     }
 
 
     public sealed class DeliverMessage {
-        public readonly int Recipient;
         public readonly object Body;
+        public readonly int Recipient;
 
         public DeliverMessage(int recipient, object body) {
             Recipient = recipient;

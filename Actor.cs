@@ -1,21 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 
-namespace SimRing {
-    
+namespace SimAsync {
     public class Actor {
-        
+        readonly IEnv _env;
+
         readonly int NextActor;
         readonly int ThisActor;
-        readonly IEnv _env;
 
         public Actor(int nextActor, int thisActor, IEnv env) {
             NextActor = nextActor;
             ThisActor = thisActor;
             _env = env;
         }
+
         async Task Deposit(DepositAmount depositAmount) {
             var dac = await _env.GetAccountAmount(ThisActor);
             await _env.PutAccountAmount(ThisActor, dac + depositAmount.Amount);
@@ -29,8 +27,9 @@ namespace SimRing {
             if (msg.Amount > current) {
                 throw new InvalidOperationException($"Account {ThisActor} has insufficient amount to withdraw");
             }
+
             await _env.PutAccountAmount(ThisActor, current - msg.Amount);
-            await  RetryPolicy.SendWithBackOff(_env, msg.Target, new DepositAmount(msg.Amount, ThisActor));
+            await RetryPolicy.SendWithBackOff(_env, msg.Target, new DepositAmount(msg.Amount, ThisActor));
         }
 
         public async Task DispatchMessage(object message) {

@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
-namespace SimRing {
+namespace SimAsync {
     class Program {
         static void Main(string[] args) {
-
             const int n = 1000;
 
-            var sim = new Sim() {
+            var sim = new Sim {
                 MessageCopyProbability = 0.001M,
                 NetworkFailureProbability = 0.0001M,
                 MessageDelayProbability = 0.001M,
@@ -20,11 +18,12 @@ namespace SimRing {
                 MessageLossProbability = 0.001M,
                 // by default we use random seed
                 // Seed = 675672838,
-                
-                PrintDebug = false,
+                Seed = (uint)new Random().Next(),
+
+                PrintDebug = false
             };
             var actors = new List<Actor>();
-            for (int i = 0; i < n; i++) {
+            for (var i = 0; i < n; i++) {
                 var next = (i + 1) % n;
                 actors.Add(new Actor(next, i, sim));
             }
@@ -35,7 +34,4 @@ namespace SimRing {
             sim.Run(actors);
         }
     }
-
-
-   
 }

@@ -1,48 +1,110 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace SimRing {
+namespace SimAsync {
     public sealed class Sim : IEnv {
-
-        uint _rand;
-        long _time;
-        long _lastDebug;
-        long _steps;
-        Exception _halt;
-        long _networkOutageTill;
+        readonly Dictionary<int, long> _db = new Dictionary<int, long>();
 
         readonly SortedList<long, object> _future = new SortedList<long, object>();
-        readonly Dictionary<int, long> _db = new Dictionary<int, long>();
+
+        long _freezeId;
+        Exception _halt;
+        long _lastDebug;
+        long _networkOutageTill;
+
+        uint _rand;
+        long _steps;
+        long _time;
+        public decimal ActorFreezeProbability = 0;
+        public TimeSpan MaxExecutionTime = TimeSpan.FromSeconds(1);
 
 
         public decimal MessageCopyProbability = 0;
-        public decimal MessageLossProbability = 0;
         public decimal MessageDelayProbability = 0;
+        public decimal MessageLossProbability = 0;
         public decimal NetworkFailureProbability = 0;
         public decimal NetworkOutageProbability = 0;
+        public bool PrintDebug;
+        public uint Seed;
         public decimal StorageFailureProbability = 0;
         public decimal StorageFreezeProbability = 0;
-        public decimal ActorFreezeProbability = 0;
-        public uint Seed = 0;
-        public TimeSpan MaxExecutionTime = TimeSpan.FromSeconds(1);
-        public bool PrintDebug;
-
-        static void Print(string arg, decimal value) {
-            if (value > 0) {
-                Console.WriteLine("  {0,-30} = {1}", arg, value);
-            }
-        }
 
         public void Debug(string message) {
             if (PrintDebug) {
                 var diff = _time - _lastDebug;
                 _lastDebug = _time;
                 Console.WriteLine("+ {0:0000} ms: {1}", TimeSpan.FromTicks(diff).TotalMilliseconds, message);
+            }
+        }
+
+        public Task Delay(TimeSpan ts) {
+            var task = new FutureTask(ts);
+            task.Start();
+            return task;
+        }
+
+
+        public async Task Send(int recipient, object message) {
+            await ActorFreeze();
+            // failure could be while sending or while getting back
+
+            await IntranetRoundTrips(1);
+
+            if (Happens(MessageDelayProbability, nameof(MessageDelayProbability))) {
+                await IntranetRoundTrips(5);
+            }
+
+            if (_time < _networkOutageTill) {
+                throw new IOException("network outage");
+            }
+
+            if (Happens(NetworkOutageProbability, nameof(NetworkOutageProbability))) {
+                _networkOutageTill = _time + TimeSpan.FromSeconds(20 + NextUint(60)).Ticks;
+            }
+
+
+            var networkFailure = Happens(NetworkFailureProbability, nameof(NetworkFailureProbability));
+
+            var delivered = NextUint(2) == 0;
+            if (!networkFailure || delivered) {
+                var delayMs = 5 + NextUint(17);
+
+                Schedule(TimeSpan.FromMilliseconds(delayMs), new DeliverMessage(recipient, message));
+            }
+
+            if (Happens(MessageCopyProbability, nameof(MessageCopyProbability))) {
+                Send(recipient, message);
+            }
+
+            if (networkFailure) {
+                throw new IOException("network error");
+            }
+        }
+
+
+        public async Task<long> GetAccountAmount(int key) {
+            await ActorFreeze();
+            await StorageFreeze();
+
+            if (_db.TryGetValue(key, out var value)) {
+                return value;
+            }
+
+            return 0;
+        }
+
+        public async Task PutAccountAmount(int key, long value) {
+            await ActorFreeze();
+            await StorageFreeze();
+            _db[key] = value;
+        }
+
+        static void Print(string arg, decimal value) {
+            if (value > 0) {
+                Console.WriteLine("  {0,-30} = {1}", arg, value);
             }
         }
 
@@ -64,7 +126,7 @@ namespace SimRing {
             }
 
             var result = NextUint(10000);
-            if (result >= (value * 10000)) {
+            if (result >= value * 10000) {
                 return false;
             }
 
@@ -84,13 +146,7 @@ namespace SimRing {
         }
 
         public void Run(List<Actor> actors) {
-
-            var seed = Seed;
-            if (seed == 0) {
-                seed = (uint) new Random().Next();
-            }
-
-            _rand = seed;
+            _rand = Seed;
             _halt = null;
             var scheduler = new SimScheduler(this);
             var factory = new TaskFactory(scheduler);
@@ -138,7 +194,6 @@ namespace SimRing {
                         break;
                     }
                 }
-
             } catch (Exception ex) {
                 reason = "fatal";
                 _halt = ex;
@@ -151,7 +206,7 @@ namespace SimRing {
             var factor = softTime.TotalHours / watch.Elapsed.TotalHours;
 
             Console.WriteLine("Simulation parameters:");
-            Console.WriteLine("  {0,-30} = {1}", "Rand seed", seed);
+            Console.WriteLine("  {0,-30} = {1}", "Rand seed", Seed);
             Print(nameof(MessageCopyProbability), MessageCopyProbability);
             Print(nameof(MessageDelayProbability), MessageDelayProbability);
             Print(nameof(NetworkFailureProbability), NetworkFailureProbability);
@@ -169,8 +224,6 @@ namespace SimRing {
             Console.WriteLine($"Took {watch.Elapsed.TotalSeconds:F1} seconds of real time (x{factor:F0} speed-up)");
         }
 
-        long _freezeId;
-
         async Task ActorFreeze() {
             if (Happens(ActorFreezeProbability, nameof(ActorFreezeProbability))) {
                 var freeze = _freezeId++;
@@ -180,55 +233,10 @@ namespace SimRing {
             }
         }
 
-        public Task Delay(TimeSpan ts) {
-            var task = new FutureTask(ts);
-            task.Start();
-            return task;
-        }
-
         Task IntranetRoundTrips(int count) {
             // roundrip is 150ms
             var ms = count * 10;
             return Delay(TimeSpan.FromMilliseconds(ms + NextUint((uint) ms)));
-        }
-
-
-
-        public async Task Send(int recipient, object message) {
-            await ActorFreeze();
-            // failure could be while sending or while getting back
-
-            await IntranetRoundTrips(1);
-
-            if (Happens(MessageDelayProbability, nameof(MessageDelayProbability))) {
-                await IntranetRoundTrips(5);
-            }
-
-            if (_time < _networkOutageTill) {
-                throw new IOException("network outage");
-            }
-
-            if (Happens(NetworkOutageProbability, nameof(NetworkOutageProbability))) {
-                _networkOutageTill = _time + TimeSpan.FromSeconds(20 + NextUint(60)).Ticks;
-            }
-
-
-            bool networkFailure = Happens(NetworkFailureProbability, nameof(NetworkFailureProbability));
-
-            bool delivered = NextUint(2) == 0;
-            if (!networkFailure || delivered) {
-                var delayMs = 5 + NextUint(17);
-
-                Schedule(TimeSpan.FromMilliseconds(delayMs), new DeliverMessage(recipient, message));
-            }
-
-            if (Happens(MessageCopyProbability, nameof(MessageCopyProbability))) {
-                Send(recipient, message);
-            }
-
-            if (networkFailure) {
-                throw new IOException("network error");
-            }
         }
 
         bool TryGetFuture(out object o) {
@@ -252,28 +260,10 @@ namespace SimRing {
             return true;
         }
 
-
-        public async Task<long> GetAccountAmount(int key) {
-            await ActorFreeze();
-            await StorageFreeze();
-
-            if (_db.TryGetValue(key, out var value)) {
-                return value;
-            }
-
-            return 0;
-        }
-
         async Task StorageFreeze() {
             if (Happens(StorageFreezeProbability, nameof(StorageFreezeProbability))) {
                 await Delay(TimeSpan.FromMilliseconds(NextUint(10000)));
             }
-        }
-
-        public async Task PutAccountAmount(int key, long value) {
-            await ActorFreeze();
-            await StorageFreeze();
-            _db[key] = value;
         }
     }
 }

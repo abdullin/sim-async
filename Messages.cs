@@ -1,4 +1,4 @@
-﻿namespace SimRing {
+﻿namespace SimAsync {
     public sealed class DepositAmount {
         public readonly long Amount;
         public readonly long FromActor;

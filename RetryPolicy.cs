@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace SimRing {
+namespace SimAsync {
     public static class RetryPolicy {
         public static async Task SendWithBackOff(IEnv env, int recipient, object msg) {
             var counter = 0;
@@ -17,6 +17,7 @@ namespace SimRing {
                         await env.Delay(sleep);
                         continue;
                     }
+
                     throw;
                 }
             }
@@ -35,7 +36,6 @@ namespace SimRing {
                     }
 
                     throw;
-
                 }
             }
         }
