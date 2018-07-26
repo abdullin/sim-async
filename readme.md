@@ -94,3 +94,7 @@ simulations). How would you handle it?
 
 Remember, that the any simulated logic will eventually be replaced by
 the production code. They have to match.
+
+## I want to learn more!
+
+Let's run a distributed cluster and unleash a chaos monkey upon it! Go to [sim cluster](https://github.com/abdullin/sim-cluster).
