@@ -8,9 +8,10 @@ simulation will inject random faults and fast-forward time.
 
 ## Reference List
 
-1. [SimCPU](https://github.com/abdullin/simcpu)
-2. [SimRing](https://gist.github.com/abdullin/af7c9b7fd4aa58cadcc346c8e194d9ab)
-3. [SimAsync](https://github.com/abdullin/simasync) - *this*.
+1. [Sim CPU](https://github.com/abdullin/simcpu)
+2. [Sim Ring](https://gist.github.com/abdullin/af7c9b7fd4aa58cadcc346c8e194d9ab)
+3. [Sim Async](https://github.com/abdullin/simasync) - *this*.
+4. [Sim Cluster](https://github.com/abdullin/sim-cluster) - Discrete event simulation of a cluster of machines with .NET Core async/await
 
 # About SimAsync
 
